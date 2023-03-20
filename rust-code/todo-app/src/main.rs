@@ -1,9 +1,6 @@
-use std::{
-    io::stdin,
-    process::{self},
-};
+use std::{ process};
 
-use todo_app::{insert_todo_list, read_todo_list, ToDo};
+use todo_app::{command_input, create_or_open_file};
 
 /**
  * todo-app功能需求
@@ -15,28 +12,15 @@ use todo_app::{insert_todo_list, read_todo_list, ToDo};
  */
 fn main() {
     println!("Welcome to todo app...");
-    println!(
-        "
-    There is some command to use:
-    1. todo --ls 查看全部事项
-    2. todo --done 查看已完成事项
-    3. todo --undo 查看未完成事项
-
-    Now please entry a command...
-    "
-    );
-    let mut command = String::new();
-    stdin()
-        .read_line(&mut command)
-        .expect("Something went wrong!");
-
-    match &command as &str {
-        "todo --ls\n" => read_todo_list("all"),
-        "todo --done\n" => read_todo_list("done"),
-        "todo --undo\n" => read_todo_list("undo"),
-        "todo --add\n"=>insert_todo_list(),
-        _ => println!("wrong"),
+    println!("Check db file...");
+    match create_or_open_file() {
+        Ok(_) => {
+            println!("DB file is ready!");
+            command_input();
+        }
+        Err(_) => {
+            println!("Something wrong when init db text!");
+            process::exit(0);
+        }
     }
-
-
 }

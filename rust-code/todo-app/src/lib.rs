@@ -1,89 +1,117 @@
+use chrono::Local;
+
+mod todo;
+
 use std::{
+    collections::HashMap,
+    error::Error,
     fs::{self, File},
-    io::{stdin, stdout},
-    process,
+    io::stdin,
 };
 
-pub struct ToDo<'a> {
-    pub create_time: &'a str,
-    pub done_time: &'a str,
-    pub message: &'a str,
-    pub is_done: bool,
-}
-
-impl<'a> ToDo<'a> {
-    pub fn new(todo: &String) -> ToDo {
-        ToDo {
-            create_time: "2020-03-13",
-            message: todo,
-            done_time: "2020-03-13",
-            is_done: false,
-        }
-    }
-}
-
-fn loop_insert(db_path: &str) {
+fn loop_insert() {
     let mut todo_message = String::new();
     loop {
         stdin()
             .read_line(&mut todo_message)
             .expect("something went wrong when type message!");
-        // 原先的todo数据
-        let contents = fs::read_to_string(db_path).unwrap_or_else(|error| {
-            println!("something wrong :{:#?}", error);
-            process::exit(0);
-        });
-        println!("todo list:{:#?}", contents);
-        let new_contents = format!("{} \n {}", contents, todo_message);
-        fs::write(db_path, new_contents).unwrap_or_else(|error| {
-            println!("something wrong :{:#?}", error);
-        });
-        if todo_message.as_str() == "exit" {
-            println!("222")
+        insert_todo_list(&todo_message);
+    }
+}
+
+pub fn insert_todo_list(message: &String) {
+    let db_path = "./db.json";
+
+    let fmt = "%Y-%m-%d";
+    let today = Local::now().format(fmt).to_string();
+    println!("today:{}", today);
+
+    // get todo's data
+    let todo_list = match fs::read_to_string(db_path) {
+        Ok(it) => it,
+        Err(_) => String::new(),
+    };
+
+    // json to object
+    let mut todos: HashMap<String, Vec<todo::Todo>> = serde_json::from_str(&todo_list).unwrap();
+    let date_vec = todos.keys().any(|date| date == &today);
+    let new_todo: todo::Todo = todo::Todo::new(&message);
+    if date_vec {
+        // 向今日插入数据
+        let today_todo = todos.get_mut(&today).unwrap();
+        today_todo.push(new_todo);
+    } else {
+        todos.insert(today, vec![new_todo]);
+    }
+    // 写入文件
+    let contents: String = serde_json::to_string(&todos).unwrap();
+    fs::write(db_path, contents).unwrap();
+}
+
+pub fn read_todo_list(mode: &str) {
+    println!("mode:{:#?}", mode);
+
+    let db_path = "./db.json";
+    // get todo's data
+    let todo_list = match fs::read_to_string(db_path) {
+        Ok(it) => it,
+        Err(_) => String::new(),
+    };
+
+    // json to object
+    let todos: HashMap<String, Vec<todo::Todo>> = serde_json::from_str(&todo_list).unwrap();
+    // get all todo
+    for date in todos.keys() {
+        println!("date: {}", date);
+        for todo in &todos[date] {
+            if mode == "all" {
+                println!("{}-{}", todo.todo_content, todo.is_done)
+            }
+            if mode == "done" && todo.is_done {
+                println!("{}-{}", todo.todo_content, todo.is_done)
+            }
         }
     }
 }
 
-pub fn insert_todo_list() {
-    let db_path = "./db.txt";
-    // 判断是否存在db.txt文件，不存在则创建文件
-    match File::open(db_path) {
-        Ok(_) => loop_insert(db_path),
+// 打开文件
+pub fn create_or_open_file() -> Result<File, Box<dyn Error>> {
+    let db_path = "./db.json";
+    let file = match File::open(db_path) {
+        Ok(file) => {
+            println!("db text has already!");
+            file
+        }
         Err(_) => {
-            println!("There is no such file, we'll create a file which store the todo list!");
-            match File::create(db_path) {
-                Ok(_) => println!("db has been create!"),
-                Err(_) => println!("something wrong when create db"),
-            }
-            println!("22323");
+            println!("There's no db file, prepare to create the file");
+            File::create(db_path)?
         }
     };
+    Ok(file)
 }
 
-pub fn read_todo_list(mode: &str) {
-    let todo_list = fs::read_to_string("./db.txt");
-    let todo_list = match todo_list {
-        Ok(todos) => todos,
-        Err(_) => "something wrong".to_string(),
-    };
-    let todo_collect: Vec<&str> = todo_list.split("\n").collect();
-    for todo in todo_collect {
-        if !todo.is_empty() {
-            let todo_item: Vec<&str> = todo.split("|").collect();
-            if mode == "all" {
-                println!(" | {} | {} | {}", todo_item[0], todo_item[1], todo_item[2]);
-            }
-            if mode == "done" {
-                if todo_item[2] == "is done" || todo_item[2] == "true" {
-                    println!(" | {} | {} | {}", todo_item[0], todo_item[1], todo_item[2])
-                }
-            }
-            if mode == "undo" {
-                if todo_item[2] == "is done" || todo_item[2] == "false" {
-                    println!(" | {} | {} | {}", todo_item[0], todo_item[1], todo_item[2])
-                }
-            }
-        }
+// 命令输入
+pub fn command_input() {
+    println!(
+        "
+    There is some command to use:
+    1. todo --ls 查看全部事项
+    2. todo --done 查看已完成事项
+    3. todo --undo 查看未完成事项
+
+    Now please entry a command...
+    "
+    );
+    let mut command = String::new();
+    stdin()
+        .read_line(&mut command)
+        .expect("Something went wrong!");
+    match &command as &str {
+        "todo --ls\n" => read_todo_list("all"),
+        "todo --done\n" => read_todo_list("done"),
+        "todo --undo\n" => read_todo_list("undo"),
+        "todo --add\n" => loop_insert(),
+        _ => println!("wrong"),
     }
 }
 
@@ -95,10 +123,12 @@ mod test_todo_app {
     fn test_read_all_todo_list() {
         read_todo_list("all");
     }
+    #[test]
     fn test_read_done_todo_list() {
         read_todo_list("done");
     }
+    #[test]
     fn test_read_undo_todo_list() {
-        read_todo_list("done");
+        read_todo_list("undo");
     }
 }

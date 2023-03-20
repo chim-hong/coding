@@ -1,8 +1,0 @@
-todo-item|create time|is done
-do work|2020-03-01 |false
-drink water|2020-03-01|true
- 
- exit
- 
- exit
-exit
