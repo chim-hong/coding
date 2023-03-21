@@ -1,1 +1,0 @@
-/Users/sanmws/KuChi/coding/rust-code/guessing_game/target/debug/guessing_game: /Users/sanmws/KuChi/coding/rust-code/guessing_game/src/lib.rs /Users/sanmws/KuChi/coding/rust-code/guessing_game/src/lifecycle.rs /Users/sanmws/KuChi/coding/rust-code/guessing_game/src/main.rs
