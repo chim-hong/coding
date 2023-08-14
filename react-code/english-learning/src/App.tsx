@@ -1,86 +1,72 @@
-import React, { useState } from 'react'
-import { Input, Button, Space } from 'antd'
-import { GrammarlyEditorPlugin, GrammarlyButton } from '@grammarly/editor-sdk-react'
-import { Configuration, OpenAIApi } from "openai";
-const configuration = new Configuration({
-  organization: "org-gy6XG3og47WgbJYWsKHegCpW",
-  apiKey: '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',
-});
-const openai = new OpenAIApi(configuration);
+import { useState } from 'react'
+import { Input } from 'antd'
+
+import { createLanguageModel, createJsonTranslator } from './typechat/'
+const model = createLanguageModel(
+  {
+    OPENAI_API_KEY: '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',
+    OPENAI_MODEL: 'gpt-3.5-turbo'
+  });
+
+const schema =
+  `
+  export type Search = LineItem | UnknownText;
+
+  // Use this type for order items that match nothing else
+  export interface UnknownText {
+    type: 'unknown',
+    text: string; // The text that wasn't understood
+  }
+
+  export interface LineItem {
+    params: Product;
+  }
+
+  export type Product = Decision | Channel;
+
+  export interface Decision {
+    Decision?: DecisionOptions[];
+  }
+
+  export interface Channel {
+    Channel?: ChannelOptions[];
+  }
+
+  export type DecisionOptions = 'Accept' | 'Review' | 'Reject'
+
+  export type ChannelOptions = 'ios' | 'android' | 'web'
+`;
+
+
+const translator = createJsonTranslator(model, schema, 'Search22');
 
 function GrammarlyEditor() {
-  const [answers, setAnswers] = useState<{ type: 'prompt' | 'answer', message: string | any }[]>([])
+  const [answers, setAnswers] = useState<any>()
   const [input, setInput] = useState<string>('')
 
-
   async function fetchAnswer() {
-    setAnswers(answers => {
-      return [
-        ...answers,
-        { type: 'prompt', message: input }
-      ]
-    })
-    const response = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      messages: [
-        { "role": "system", "content": "You are a helpful assistant that English teacher, and your name is GPT-123. " },
-        { "role": "system", "content": "When you introduce yourself, you should tell me your mission." },
-        { "role": "system", "content": "if there is a mistake, you need to tell me the mistake first when I sended message to you. " },
-        { "role": "system", "content": "If the question I asked was a 'Chinese English', you needs tell me 'It's Chinese English/Chinlish' and correct it." },
-        { role: 'user', content: input }],
-      temperature: 0,
-      max_tokens: 70,
-    });
-    if (response) {
-      setAnswers(answers => {
-        return [
-          ...answers,
-          { type: 'answer', message: response.data.choices[0].message!.content }
-        ]
-      })
-      setInput('')
-    }
+    setAnswers("正在查找数据……");
+    const response = await translator.translate(input) as any;
+    console.log('response', response)
+    setAnswers(response?.data?.params)
   }
 
   return (
     <>
-      <div style={{ width: 700, height: 500, overflow: 'auto',border:'1px solid #999',padding:20 }} >
-        {
-          answers.map((item) => (<div
-            style={{ padding: '20px 0' }}>
-            {item.type === 'answer'
-              ?
-              <div>{`Mr.Teacher: ${item.message}`}</div>
-              :
-              <div style={{ textAlign: 'end' }}>{`${item.message}: you`}</div>
-            }
-          </div>))
-        }
+      <div style={{ height: 200, overflow: 'auto', border: '1px solid #999', padding: 20 }} >
+        {JSON.stringify(answers)}
       </div>
-      <Space>
-        <GrammarlyEditorPlugin
-          clientId="client_1wDpXD29PZoRwWowZu2MKs"
-          config={{
-            activation: 'immediate'
-          }}
-          onKeyDownCapture={(e) => {
-            if (e.code === 'Enter') {
-              fetchAnswer();
-            }
-          }}
-        >
-          <Input
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value)
-            }}
-          />
-        </GrammarlyEditorPlugin>
-        <Button
-          onClick={fetchAnswer}
-        >Submit
-        </Button>
-      </Space>
+      <Input
+        value={input}
+        onChange={(e) => {
+          setInput(e.target.value)
+        }}
+        onKeyDownCapture={(e) => {
+          if (e.key === 'Enter') {
+            fetchAnswer();
+          }
+        }}
+      />
     </>
   )
 }

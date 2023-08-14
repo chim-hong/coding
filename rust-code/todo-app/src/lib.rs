@@ -1,13 +1,13 @@
 use chrono::Local;
-
-mod todo;
-
 use std::{
     collections::HashMap,
+    env,
     error::Error,
     fs::{self, File},
     io::stdin,
 };
+
+mod todo;
 
 fn loop_insert() {
     let mut todo_message = String::new();
@@ -20,14 +20,14 @@ fn loop_insert() {
 }
 
 pub fn insert_todo_list(message: &String) {
-    let db_path = "./db.json";
+    let db_path = env::var("HOME").unwrap() + "/Desktop/db.json";
 
     let fmt = "%Y-%m-%d";
     let today = Local::now().format(fmt).to_string();
     println!("today:{}", today);
 
     // get todo's data
-    let todo_list = match fs::read_to_string(db_path) {
+    let todo_list = match fs::read_to_string(&db_path) {
         Ok(it) => it,
         Err(_) => String::new(),
     };
@@ -45,7 +45,7 @@ pub fn insert_todo_list(message: &String) {
     }
     // 写入文件
     let contents: String = serde_json::to_string(&todos).unwrap();
-    fs::write(db_path, contents).unwrap();
+    fs::write(&db_path, contents).unwrap();
 }
 
 pub fn read_todo_list(mode: &str) {
