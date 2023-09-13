@@ -19,6 +19,7 @@ struct Response {
 #[post("/login")]
 async fn login(params: web::Json<LoginParams>) -> impl Responder {
     let json = json!(params);
+    let mut flag = false;
 
     let res: Response = if params.account == "admin" && params.password == "123456" {
         println!("Login success");
@@ -30,16 +31,21 @@ async fn login(params: web::Json<LoginParams>) -> impl Responder {
     } else {
         println!("Login failed");
         let msg = String::from("password or account is wrong");
+        flag = true;
         Response {
             code: 201,
             msg: "failed".to_string(),
             data: json!(msg),
         }
     };
-
     let res = serde_json::to_value(&res).unwrap();
     println!("res is: {:#?}", res);
-    HttpResponse::Ok().body(json!(res).to_string())
+    if flag  {
+        HttpResponse::Ok().body(fs::read_404())
+    }else {
+        HttpResponse::Ok().body(json!(res).to_string())
+    }
+
 }
 
 #[actix_web::main]

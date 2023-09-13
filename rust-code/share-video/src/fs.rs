@@ -6,3 +6,11 @@ pub fn read_index() -> String {
     file.read_to_string(&mut contents).unwrap();
     contents
 }
+
+pub fn read_404() -> String {
+    let mut file = File::open("/Users/sanmws/chimhong/coding/rust-code/share-video/src/404.html").unwrap();
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).unwrap();
+    contents
+}
+

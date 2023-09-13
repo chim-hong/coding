@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=1400, initial-scale=1.0">
+  <title>Share Video</title>
+</head>
+
+<body>
+  <script>
+    function handleSubmit(e) {
+      const form = document.querySelector('#form');
+      const formData = new FormData(form);
+
+      const name = formData.get('account');
+      const age = formData.get('password');
+
+      // 将表单数据转换为 JSON 字符串
+      const formJson = JSON.stringify(Object.fromEntries(formData.entries()));
+      console.log(formJson);
+      fetch('http://127.0.0.1:8080/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: formJson
+      }).then(res => res.json())
+        .then(res => {
+          console.log(res);
+        })
+        .catch(err => console.log(err));
+      return false;
+    }
+  </script>
+  <div>
+    <h2>Welcome</h2>
+    <h3>Something is error!</h3>
+  </div>
+</body>
+
+</html>
